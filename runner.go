@@ -166,7 +166,11 @@ func (r *Runner) runCommand(cmd string) {
 
 	shell := NewShell(command)
 	out, _ := shell.Run()
-	fmt.Println(string(bytes.Trim(out, "\r\n\"")))
+
+	output := bytes.Trim(out, "\r\n\"")
+	if len(output) > 0 {
+		fmt.Println(string(bytes.Trim(out, "\r\n\"")))
+	}
 }
 
 func (r *Runner) ParseCommand(cmd string) (name, command string) {
