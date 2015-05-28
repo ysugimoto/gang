@@ -1,13 +1,13 @@
 package gang
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/ysugimoto/go-cliargs"
 	"github.com/ysugimoto/pecolify"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"sort"
 	"strings"
 )
@@ -162,32 +162,17 @@ func (r *Runner) runCommand(cmd string) {
 	name, command := r.ParseCommand(cmd)
 
 	conf.IncrementCount(name)
-	fmt.Println(command)
-	cmds := strings.Split(command, " ")
+	fmt.Printf("Execute Command: %s\n", command)
 
-	var out []byte
-	var err error
-
-	if len(cmds) == 1 {
-		out, err = exec.Command(cmds[0]).Output()
-	} else {
-		args := cmds[1:]
-		fmt.Printf("%v\n", args)
-		out, err = exec.Command(cmds[0], args...).Output()
-	}
-
-	if err != nil {
-		fmt.Println("Command Error!")
-		fmt.Printf("%v\n", err)
-	} else {
-		fmt.Println(string(out[0 : len(out)-1]))
-	}
+	shell := NewShell(command)
+	out, _ := shell.Run()
+	fmt.Println(string(bytes.Trim(out, "\r\n\"")))
 }
 
 func (r *Runner) ParseCommand(cmd string) (name, command string) {
 	spl := strings.Split(cmd, ":")
 	name = spl[0]
-	command = strings.Join(spl[1:], "")
+	command = strings.Join(spl[1:], ":")
 
 	return name, strings.TrimSpace(command)
 }
