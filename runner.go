@@ -1,6 +1,7 @@
 package gang
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -9,7 +10,6 @@ import (
 	"io/ioutil"
 	"os"
 	"sort"
-	_ "strconv"
 	"strings"
 )
 
@@ -31,14 +31,12 @@ func init() {
 }
 
 type Runner struct {
-	args     *cliarg.Arguments
-	commands CommandList
+	args *cliarg.Arguments
 }
 
 func NewRunner(args *cliarg.Arguments) *Runner {
 	return &Runner{
-		args:     args,
-		commands: conf.Commands,
+		args: args,
 	}
 }
 
@@ -59,48 +57,34 @@ func (r *Runner) _run() int {
 			return 0
 		}
 
-		switch conf.ListMode {
-		case MODE_LS:
-			fmt.Println("Available Commands =========================")
-			for i, c := range list {
-				fmt.Printf("[%d] %s\n", i+1, c)
-			}
-			selected := r.getInput(list)
-			if c := r.commands.FindIndex(selected - 1); c != nil {
-				c.Increment()
-				r.runCommand(c.String())
-			}
-		case MODE_PECO:
-			p := pecolify.New()
-			selected, _ := p.Transform(list)
-			if selected != "" {
-				r.runCommand(selected)
-			}
-		}
+		r.runList(list)
 
 		return 0
 	}
 
 	switch cmd, _ := r.args.GetCommandAt(1); cmd {
+	case "mode":
+		mode, ok := r.args.GetCommandAt(1)
+		if ok {
+			conf.ListMode = mode
+		}
+		return 0
+
 	case "reload":
-		command := r.getLatestCommand()
-		name := strings.Split(command, " ")
-		r.commands.Add(name[0], command)
+		//r.getLatestCommand()
+		//name := strings.Split(command, " ")
+		//r.commands.Add(name[0], command)
 		return 0
 
 	case "ammo":
-		list := r.getCommandList(false)
+		list := r.getCommandList(true)
 
 		if len(list) == 0 {
 			fmt.Println("No Commands Available")
 			return 0
 		}
 
-		p := pecolify.New()
-		selected, _ := p.Transform(list)
-		if selected != "" {
-			r.runCommand(selected)
-		}
+		r.runList(list)
 		return 0
 
 	case "kill":
@@ -109,56 +93,79 @@ func (r *Runner) _run() int {
 			fmt.Println("[Error] \"kill\" must be supplied command name.")
 			return 1
 		}
-		commands := []Command{}
 
-		for _, cmd := range conf.Commands {
-			if cmd.Name != name {
-				commands = append(commands, cmd)
+		commands := CommandList{}
+		for _, c := range conf.Commands {
+			if c.Name != name {
+				commands = append(commands, c)
 			}
 		}
 
-		if len(commands) == len(conf.Commands) {
+		if len(conf.Commands) == len(commands) {
 			fmt.Printf("[Error] \"%s\" command is not exists. Nothig to do.\n", name)
 			return 1
 		}
 
 		conf.Commands = commands
+
 		fmt.Printf("Command %s killed.\n", name)
 		return 0
 
 	case "bullet":
 		var (
-			name, cmd string
-			ok        bool
+			name, cmd     string
+			ok, overwrite bool
 		)
 
 		if name, ok = r.args.GetCommandAt(2); !ok {
-			fmt.Println("[Error] \"bullet\" command needs 2 parametes: [name/command].")
-			return 1
-		}
-		if cmd, ok = r.args.GetCommandAt(3); !ok {
-			fmt.Println("[Error] \"bullet\" command needs 2 parametes: [name/command].")
+			fmt.Println("[Error] \"bullet\" command needs at least 1 parametes: [name].")
 			return 1
 		}
 
-		for _, cmd := range conf.Commands {
-			if cmd.Name == name {
-				fmt.Printf("[Error] command \"%s\" already exists.\n", name)
+		if c := conf.Commands.Find(name); c != nil {
+			msg := fmt.Sprintf("Command name \"%s\" already exists. Override it? [y/n]: ", name)
+			if !GetInputOfYesNo(msg) {
+				fmt.Println("aborted.")
+				return 1
+			}
+			overwrite = true
+		}
+
+		if cmd, ok = r.args.GetCommandAt(3); !ok {
+			fmt.Printf("[bullet:%s] input runnable command you like\n", name)
+			fmt.Print("command> ")
+			reader := bufio.NewReader(os.Stdin)
+			cmd, _ = reader.ReadString('\n')
+			cmd = strings.TrimRight(cmd, "\n")
+			if cmd == "" {
+				fmt.Println("Comamnd must not empty!")
+				return 1
 			}
 		}
 
-		conf.Commands = append(conf.Commands, Command{
-			Name:  name,
-			Cmd:   cmd,
-			Times: 0,
-		})
-
-		fmt.Printf("Command \"%s\" Bulleted.\n", name)
+		if !overwrite {
+			conf.Commands = append(conf.Commands, Command{
+				Name: name,
+				Cmd:  cmd,
+			})
+			fmt.Printf("Command \"%s\" Bulleted.\n", name)
+		} else {
+			for i, c := range conf.Commands {
+				if c.Name == name {
+					conf.Commands[i] = Command{
+						Name: name,
+						Cmd:  cmd,
+					}
+					break
+				}
+			}
+			fmt.Printf("Command \"%s\" Reloaded.\n", name)
+		}
 		return 0
 
 	default:
-		if c := r.commands.Find(cmd); c != nil {
-			r.runCommand(c.String())
+		if c := conf.Commands.Find(cmd); c != nil {
+			r.shell(c.Cmd)
 		} else {
 			fmt.Printf("Command %s is not available.\n", cmd)
 		}
@@ -167,26 +174,35 @@ func (r *Runner) _run() int {
 	return 0
 }
 
-func (r *Runner) getInput(list []string) int {
-	var selected int
-
-	for {
-		fmt.Printf("Select run command [1-%d]: ", len(list))
-		fmt.Scanf("%d", &selected)
-		if selected >= 1 && selected <= len(list) {
-			return selected
+func (r *Runner) runList(list []string) {
+	switch conf.ListMode {
+	case MODE_PECO:
+		p := pecolify.New()
+		selected, _ := p.Transform(list)
+		if selected != "" {
+			r.runCommand(selected)
 		}
-		fmt.Println("Selected command is out of range.")
+	default:
+		fmt.Println("Available Commands =========================")
+		for i, c := range list {
+			fmt.Printf("[%d] %s\n", i+1, c)
+		}
+		selected := GetInputOfSelectIndex(list)
+		if c := conf.Commands.FindIndex(selected - 1); c != nil {
+			c.Increment()
+			r.shell(c.Cmd)
+		}
 	}
 }
 
 func (r *Runner) getCommandList(sorted bool) (list []string) {
 	if sorted {
-		sort.Sort(r.commands)
+		sort.Sort(conf.Commands)
 	}
 
-	for _, cmd := range r.commands {
-		list = append(list, cmd.String())
+	max := conf.Commands.GetMaxNameSize()
+	for _, cmd := range conf.Commands {
+		list = append(list, cmd.String(max))
 	}
 
 	return
@@ -195,11 +211,15 @@ func (r *Runner) getCommandList(sorted bool) (list []string) {
 func (r *Runner) runCommand(cmd string) {
 	name, command := r.ParseCommand(cmd)
 
-	if c := r.commands.Find(name); c != nil {
+	if c := conf.Commands.Find(name); c != nil {
 		c.Increment()
 	}
-	fmt.Printf("Execute Command: %s\n", command)
+	//fmt.Printf("Execute Command: %s\n", command)
 
+	r.shell(command)
+}
+
+func (r *Runner) shell(command string) {
 	shell := NewShell(command)
 	out, _ := shell.Run()
 
@@ -215,8 +235,4 @@ func (r *Runner) ParseCommand(cmd string) (name, command string) {
 	command = strings.Join(spl[1:], ":")
 
 	return name, strings.TrimSpace(command)
-}
-
-func (r *Runner) getLatestCommand() string {
-	return ""
 }

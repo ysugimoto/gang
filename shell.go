@@ -40,11 +40,18 @@ func (s *Shell) Run() ([]byte, error) {
 
 func parseCommand(cmd string) string {
 	var input string
+	var shown bool
+
 	for {
 		matches := BIND.FindStringSubmatch(cmd)
 		if len(matches) == 0 {
 			break
 		}
+		if !shown {
+			fmt.Printf("Execute command needs parameter: %s\n", cmd)
+			shown = true
+		}
+
 		fmt.Print("Bind Parameter \"" + matches[2] + "\" is: ")
 		fmt.Scanf("%s", &input)
 		cmd = strings.Replace(cmd, matches[1], input, -1)
