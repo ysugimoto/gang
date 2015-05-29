@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"os"
 	"sort"
+	_ "strconv"
 	"strings"
 )
 
@@ -21,7 +22,7 @@ func init() {
 	confFile := os.Getenv("HOME") + "/.gang"
 	if _, err := os.Stat(confFile); err != nil {
 		// create file
-		buffer = []byte("{\"commands\":[]}")
+		buffer = []byte("{\"listmode\":\"ls\",\"commands\":[]}")
 		ioutil.WriteFile(confFile, buffer, 0644)
 	} else {
 		buffer, _ = ioutil.ReadFile(confFile)
@@ -30,12 +31,14 @@ func init() {
 }
 
 type Runner struct {
-	args *cliarg.Arguments
+	args     *cliarg.Arguments
+	commands CommandList
 }
 
 func NewRunner(args *cliarg.Arguments) *Runner {
 	return &Runner{
-		args: args,
+		args:     args,
+		commands: conf.Commands,
 	}
 }
 
@@ -56,11 +59,25 @@ func (r *Runner) _run() int {
 			return 0
 		}
 
-		p := pecolify.New()
-		selected, _ := p.Transform(list)
-		if selected != "" {
-			r.runCommand(selected)
+		switch conf.ListMode {
+		case MODE_LS:
+			fmt.Println("Available Commands =========================")
+			for i, c := range list {
+				fmt.Printf("[%d] %s\n", i+1, c)
+			}
+			selected := r.getInput(list)
+			if c := r.commands.FindIndex(selected - 1); c != nil {
+				c.Increment()
+				r.runCommand(c.String())
+			}
+		case MODE_PECO:
+			p := pecolify.New()
+			selected, _ := p.Transform(list)
+			if selected != "" {
+				r.runCommand(selected)
+			}
 		}
+
 		return 0
 	}
 
@@ -68,7 +85,7 @@ func (r *Runner) _run() int {
 	case "reload":
 		command := r.getLatestCommand()
 		name := strings.Split(command, " ")
-		conf.AddCommand(name[0], command)
+		r.commands.Add(name[0], command)
 		return 0
 
 	case "ammo":
@@ -140,18 +157,35 @@ func (r *Runner) _run() int {
 		return 0
 
 	default:
-
+		if c := r.commands.Find(cmd); c != nil {
+			r.runCommand(c.String())
+		} else {
+			fmt.Printf("Command %s is not available.\n", cmd)
+		}
 	}
 
 	return 0
 }
 
+func (r *Runner) getInput(list []string) int {
+	var selected int
+
+	for {
+		fmt.Printf("Select run command [1-%d]: ", len(list))
+		fmt.Scanf("%d", &selected)
+		if selected >= 1 && selected <= len(list) {
+			return selected
+		}
+		fmt.Println("Selected command is out of range.")
+	}
+}
+
 func (r *Runner) getCommandList(sorted bool) (list []string) {
 	if sorted {
-		sort.Sort(conf.Commands)
+		sort.Sort(r.commands)
 	}
 
-	for _, cmd := range conf.Commands {
+	for _, cmd := range r.commands {
 		list = append(list, cmd.String())
 	}
 
@@ -161,7 +195,9 @@ func (r *Runner) getCommandList(sorted bool) (list []string) {
 func (r *Runner) runCommand(cmd string) {
 	name, command := r.ParseCommand(cmd)
 
-	conf.IncrementCount(name)
+	if c := r.commands.Find(name); c != nil {
+		c.Increment()
+	}
 	fmt.Printf("Execute Command: %s\n", command)
 
 	shell := NewShell(command)
