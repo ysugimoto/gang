@@ -1,9 +1,8 @@
 package gang
 
 import (
-	"bytes"
-	"fmt"
 	"github.com/codeskyblue/go-sh"
+	"github.com/ysugimoto/splitter"
 	"regexp"
 	"strings"
 )
@@ -14,6 +13,7 @@ const (
 )
 
 var BIND = regexp.MustCompile("(\\{:([0-9a-zA-Z\\.@\\-_]+?)\\})")
+var DOUBLE_SPACE = regexp.MustCompile("\\s{2,}")
 
 type Shell struct {
 	command []string
@@ -22,7 +22,7 @@ type Shell struct {
 func NewShell(cmd string) *Shell {
 	cmd = parseCommand(cmd)
 	return &Shell{
-		command: splitString(cmd, "|"),
+		command: splitter.SplitString(cmd, "|"),
 	}
 }
 
@@ -30,7 +30,8 @@ func (s *Shell) Run() ([]byte, error) {
 	sess := sh.NewSession()
 
 	for _, cmd := range s.command {
-		c := splitString(cmd, " ")
+		cmd = DOUBLE_SPACE.ReplaceAllString(strings.TrimSpace(cmd), " ")
+		c := splitter.SplitString(cmd, " ")
 		name := c[0]
 		sess.Command(name, c[1:])
 	}
@@ -48,55 +49,14 @@ func parseCommand(cmd string) string {
 			break
 		}
 		if !shown {
-			fmt.Printf("Execute command needs parameter: %s\n", cmd)
+			Printf("Execute command needs parameter: %s\n", cmd)
 			shown = true
 		}
 
-		fmt.Print("Bind Parameter \"" + matches[2] + "\" is: ")
-		fmt.Scanf("%s", &input)
+		QPrint("Bind Parameter \"" + matches[2] + "\" is: ")
+		Scanf("%s", &input)
 		cmd = strings.Replace(cmd, matches[1], input, -1)
 	}
 
 	return cmd
-}
-
-func splitString(str, sep string) []string {
-	stack := []byte{}
-	parsed := []string{}
-	input := []byte(str)
-	quote := false
-	squote := false
-	dquote := false
-
-	for _, v := range input {
-		if string(v) == sep && !quote {
-			parsed = append(parsed, string(bytes.TrimSpace(stack)))
-			stack = []byte{}
-			continue
-		}
-		if v == SQ {
-			if squote {
-				quote = false
-				squote = false
-			} else {
-				quote = true
-				squote = true
-			}
-		} else if v == DQ {
-			if dquote {
-				quote = false
-				dquote = false
-			} else {
-				quote = true
-				dquote = true
-			}
-		}
-		stack = append(stack, v)
-	}
-
-	if len(stack) > 0 {
-		parsed = append(parsed, string(bytes.TrimSpace(stack)))
-	}
-
-	return parsed
 }

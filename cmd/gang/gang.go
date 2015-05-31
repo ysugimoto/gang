@@ -8,6 +8,7 @@ import (
 
 func main() {
 	args := cliarg.NewArguments()
+	args.Alias("h", "help", false)
 	args.Parse()
 
 	runner := gang.NewRunner(args)
