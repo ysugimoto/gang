@@ -21,7 +21,7 @@ func GetInputOfSelectIndex(list []string) int {
 func GetInputOfYesNo(msg string) bool {
 	var yn string
 
-	Print(msg)
+	fmt.Print(msg)
 	for {
 		Scanf("%s", &yn)
 		switch strings.ToLower(yn) {
