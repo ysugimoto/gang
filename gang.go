@@ -18,7 +18,8 @@ func ShowHelp() {
     gang [subcommand|snippet-name] [paramters...] [option]
 
 Options:
-    -h, --help : Show this help
+    -h, --help      : Show this help
+    -d, --directory : Change current directory
 
 Subcommands:
     mode [ls|peco]                  : Change list mode

@@ -46,6 +46,14 @@ func (r *Runner) Run() {
 func (r *Runner) _run() int {
 	op := NewOperation(conf)
 
+	// switch current directory
+	if dir, ok := r.args.GetOptionAsString("directory"); ok {
+		if err := os.Chdir(dir); err != nil {
+			EPrintf("%v", err)
+			os.Exit(1)
+		}
+	}
+
 	if help, _ := r.args.GetOptionAsBool("help"); help {
 		ShowHelp()
 	}

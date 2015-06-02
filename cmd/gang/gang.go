@@ -9,6 +9,7 @@ import (
 func main() {
 	args := cliarg.NewArguments()
 	args.Alias("h", "help", false)
+	args.Alias("d", "directory", nil)
 	args.Parse()
 
 	runner := gang.NewRunner(args)
