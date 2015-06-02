@@ -3,6 +3,7 @@ package gang
 import (
 	"github.com/codeskyblue/go-sh"
 	"github.com/ysugimoto/splitter"
+	"os"
 	"regexp"
 	"strings"
 )
@@ -16,22 +17,30 @@ var BIND = regexp.MustCompile("(\\{:([0-9a-zA-Z\\.@\\-_]+?)\\})")
 var DOUBLE_SPACE = regexp.MustCompile("\\s{2,}")
 
 type Shell struct {
-	command []string
+	command string
 }
 
 func NewShell(cmd string) *Shell {
-	cmd = parseCommand(cmd)
 	return &Shell{
-		command: splitter.SplitString(cmd, "|"),
+		command: parseCommand(cmd),
 	}
 }
 
 func (s *Shell) Run() ([]byte, error) {
 	sess := sh.NewSession()
+	command := splitCommand(s.command)
 
-	for _, cmd := range s.command {
-		cmd = DOUBLE_SPACE.ReplaceAllString(strings.TrimSpace(cmd), " ")
+	for _, cmd := range command {
 		c := splitter.SplitString(cmd, " ")
+		// trick: "cd path" is simply Chdir.
+		if len(c) == 2 && c[0] == "cd" {
+			if err := os.Chdir(c[1]); err != nil {
+				return nil, err
+			} else {
+				continue
+			}
+		}
+
 		name := c[0]
 		sess.Command(name, c[1:])
 	}
@@ -58,5 +67,31 @@ func parseCommand(cmd string) string {
 		cmd = strings.Replace(cmd, matches[1], input, -1)
 	}
 
-	return cmd
+	return DOUBLE_SPACE.ReplaceAllString(strings.TrimSpace(cmd), " ")
+}
+
+func splitCommand(cmd string) []string {
+	command := []string{}
+	piped := splitter.SplitString(cmd, "|")
+
+	for _, c := range piped {
+		if c == "" {
+			continue
+		}
+		amp := splitter.SplitString(c, "&&")
+		for _, a := range amp {
+			if a == "" {
+				continue
+			}
+			sep := splitter.SplitString(a, ";")
+			for _, s := range sep {
+				if s == "" {
+					continue
+				}
+				command = append(command, strings.TrimSpace(s))
+			}
+		}
+	}
+
+	return command
 }
