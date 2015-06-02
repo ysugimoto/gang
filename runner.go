@@ -2,6 +2,7 @@ package gang
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/ysugimoto/go-cliargs"
 	"io/ioutil"
 	"os"
@@ -56,6 +57,10 @@ func (r *Runner) _run() int {
 
 	if help, _ := r.args.GetOptionAsBool("help"); help {
 		ShowHelp()
+	}
+	if version, _ := r.args.GetOptionAsBool("version"); version {
+		fmt.Println(VERSION)
+		os.Exit(1)
 	}
 
 	if r.args.GetCommandSize() == 0 {

@@ -20,6 +20,7 @@ func ShowHelp() {
 Options:
     -h, --help      : Show this help
     -d, --directory : Change current directory
+    -v, --version   : Show version number
 
 Subcommands:
     mode [ls|peco]                  : Change list mode
