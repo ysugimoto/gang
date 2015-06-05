@@ -15,6 +15,8 @@ const (
 
 var BIND = regexp.MustCompile("(\\{:([0-9a-zA-Z\\.@\\-_]+?)\\})")
 var DOUBLE_SPACE = regexp.MustCompile("\\s{2,}")
+var ENVREGEX = regexp.MustCompile("\\$(.+?)\\b")
+var HOMEREGEX = regexp.MustCompile("~/")
 
 type Shell struct {
 	command string
@@ -66,6 +68,14 @@ func parseCommand(cmd string) string {
 		Scanf("%s", &input)
 		cmd = strings.Replace(cmd, matches[1], input, -1)
 	}
+
+	// Replace home syntax of "~/", and environment variables
+	cmd = HOMEREGEX.ReplaceAllStringFunc(cmd, func(match string) string {
+		return os.Getenv("HOME") + "/"
+	})
+	cmd = ENVREGEX.ReplaceAllStringFunc(cmd, func(match string) string {
+		return os.Getenv(string([]rune(match)[1:]))
+	})
 
 	return DOUBLE_SPACE.ReplaceAllString(strings.TrimSpace(cmd), " ")
 }
