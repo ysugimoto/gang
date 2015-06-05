@@ -18,7 +18,7 @@ func init() {
 	confFile := os.Getenv("HOME") + "/.gang"
 	if _, err := os.Stat(confFile); err != nil {
 		// create file
-		buffer = []byte("{\"listmode\":\"ls\",\"commands\":[]}")
+		buffer = []byte("{\"listmode\":\"ls\",\"shell\":\"bash\",\"commands\":[]}")
 		ioutil.WriteFile(confFile, buffer, 0644)
 	} else {
 		buffer, _ = ioutil.ReadFile(confFile)
@@ -69,17 +69,37 @@ func (r *Runner) _run() int {
 	}
 
 	switch cmd, _ := r.args.GetCommandAt(1); cmd {
+	case "dump":
+		c, _ := json.MarshalIndent(conf, "  ", "  ")
+		fmt.Println(string(c))
+		return 0
+
+	case "shell":
+		shell, ok := r.args.GetCommandAt(2)
+		if !ok {
+			EPrintln("shell subcommand needs second parameter ( bash or zsh )")
+			return 1
+		}
+		return op.RunShellMode(shell)
+
 	case "mode":
 		mode, ok := r.args.GetCommandAt(2)
-		if ok {
-			conf.ListMode = mode
+		if !ok {
+			EPrintln("mode subcommand needs second parameter ( ls or peco )")
+			return 1
 		}
 		return op.RunListMode(mode)
 
 	case "reload":
-		//r.getLatestCommand()
-		//name := strings.Split(command, " ")
-		//r.commands.Add(name[0], command)
+		/* This implements is experimental
+		if last, err := r.getLastCommand(); err != nil {
+			EPrintln("Cannot find last command on your environment.")
+			return 1
+		} else {
+			Printf("Last command is %s", string(last))
+			return 0
+		}
+		*/
 		return 0
 
 	case "ammo":
@@ -124,3 +144,24 @@ func (r *Runner) getCommandList(commands CommandList, sorted bool) (list []strin
 
 	return
 }
+
+/*
+func (r *Runner) getLastCommand() ([]byte, error) {
+	var historyFile string
+
+	switch conf.Shell {
+	case SHELL_BASH:
+		historyFile = os.Getenv("HOME") + "/.bash_history"
+	case SHELL_ZSH:
+		historyFile = os.Getenv("HOME") + "/.zsh_history"
+	default:
+		return nil, errors.New("")
+	}
+
+	if _, err := os.Stat(historyFile); err != nil {
+		return nil, nil
+	}
+
+	return exec.Command("tail", "-n", "1", historyFile).Output()
+}
+*/

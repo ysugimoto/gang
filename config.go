@@ -9,10 +9,14 @@ import (
 const (
 	MODE_LS   = "ls"
 	MODE_PECO = "peco"
+
+	SHELL_BASH = "bash"
+	SHELL_ZSH  = "zsh"
 )
 
 type Config struct {
 	ListMode string      `json:"listmode"`
+	Shell    string      `json:"shell"`
 	Commands CommandList `json:"commands"`
 }
 

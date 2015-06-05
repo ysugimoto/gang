@@ -25,6 +25,12 @@ func (o *Operation) RunListMode(mode string) int {
 	return 0
 }
 
+func (o *Operation) RunShellMode(shell string) int {
+	o.config.Shell = shell
+	QPrintf("Shell changed to \"%s\".\n", shell)
+	return 0
+}
+
 func (o *Operation) RunShell(command string) int {
 	shell := NewShell(command)
 	out, _ := shell.Run()
