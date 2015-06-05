@@ -1,8 +1,8 @@
 # gang
 
-Gang is a command snippet tool on any architecture.
+Gang is a command snippet tool on termnal.
 
-## Installtion
+## Installation
 
 Get the command:
 
@@ -20,10 +20,12 @@ $ gang -h
  Gang - A console command snippet management tool
 ====================================================
 Usage:
-    gang [subcommand|snippet-name] [paramters...] [option]
+    gang [subcommand|snippet-name] [parameters...] [option]
 
 Options:
-    -h, --help : Show this help
+    -h, --help      : Show this help
+    -d, --directory : Change current directory
+    -v, --version   : Show version number
 
 Subcommands:
     mode [ls|peco]                  : Change list mode
@@ -38,13 +40,13 @@ Subcommands:
   - `peco`: select command from `peco`, and execute.
 - `ammo`: sort by times whitch executed command, and show list.
 - `kill`: purge command snippet
-- `bullet`: regist new command sunippet
+- `bullet`: regist new command snippet
 
 ## Feature
 
 ### Support placeholder
 
-Gang supports placeholder snippet like `{:name}`, apply paramter dynamically on execute.
+Gang supports placeholder snippet like `{:name}`, apply parameter dynamically on execute.
 
 ```
 # Regist command with placeholder

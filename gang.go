@@ -15,7 +15,7 @@ func ShowHelp() {
 	fmt.Println(GREENB+"====================================================", RESET)
 
 	help := `Usage:
-    gang [subcommand|snippet-name] [paramters...] [option]
+    gang [subcommand|snippet-name] [parameters...] [option]
 
 Options:
     -h, --help      : Show this help
