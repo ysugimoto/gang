@@ -2,6 +2,8 @@
 
 Gang is a command snippet tool on any architecture.
 
+![screenshot](https://s3-ap-northeast-1.amazonaws.com/sugimoto/gang_ls.gif)
+
 ## Installtion
 
 Get the command:
